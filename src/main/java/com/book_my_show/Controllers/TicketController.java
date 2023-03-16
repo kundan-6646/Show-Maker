@@ -1,10 +1,9 @@
 package com.book_my_show.Controllers;
 
-import com.book_my_show.DTOs.EntryDTOs.UserEntryDTO;
-import com.book_my_show.Services.UserService;
+import com.book_my_show.DTOs.EntryDTOs.TicketEntryDTO;
+import com.book_my_show.Services.TicketService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,19 +11,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("user")
-public class UserController {
-
+@RequestMapping("ticket")
+public class TicketController {
     @Autowired
-    UserService userService;
+    TicketService ticketService;
 
-    @PostMapping("register")
-    public ResponseEntity<String> addUser(@RequestBody UserEntryDTO userEntryDTO) {
+    @PostMapping("book")
+    public ResponseEntity<String> bookTickets(@RequestBody TicketEntryDTO ticketEntryDTO) {
         try {
-            String res = userService.addUser(userEntryDTO);
+            String res = ticketService.bookTickets(ticketEntryDTO);
             return new ResponseEntity<>(res, HttpStatus.CREATED);
-        }catch (Exception exception) {
-            return new ResponseEntity<>(exception.getMessage(), HttpStatus.BAD_REQUEST);
+        }catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 }

@@ -29,7 +29,6 @@ public class ShowSeatEntity {
     @Enumerated(value = EnumType.STRING)
     private SeatType seatType;
 
-    @CreationTimestamp
     private Date bookedAt;
 
     @ManyToOne
