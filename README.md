@@ -67,8 +67,7 @@ Admins can :-
 
 # Booking Confirmation Email
 
-![image](/screenshots/confirm-mail.jpg)
-
+<img src="./screenshots/confirm-mail.jpg" width="500" />
 
 
 # Cancel Ticket's Confirmation Email
