@@ -67,8 +67,7 @@ Admins can :-
 
 # Booking Confirmation Email
 
-![image](/screenshots/mail-1.png)
-![image](/screenshots/mail-2.png)
+![image](/screenshots/confirm-mail.jpg)
 
 
 
