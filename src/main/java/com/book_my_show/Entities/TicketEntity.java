@@ -1,14 +1,13 @@
 package com.book_my_show.Entities;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.UUID;
+
 
 @Entity
 @Table(name = "tickets")

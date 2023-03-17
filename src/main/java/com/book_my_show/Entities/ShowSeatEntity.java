@@ -1,13 +1,11 @@
 package com.book_my_show.Entities;
 
 import com.book_my_show.Enums.SeatType;
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.util.Date;
 
 @Entity

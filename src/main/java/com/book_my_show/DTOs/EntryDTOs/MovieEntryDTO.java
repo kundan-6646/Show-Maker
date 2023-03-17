@@ -15,4 +15,5 @@ public class MovieEntryDTO {
     private double rating;
     private int duration;
     private MovieLanguages language;
+    private String posterUrl;
 }

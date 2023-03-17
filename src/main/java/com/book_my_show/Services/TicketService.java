@@ -2,18 +2,17 @@ package com.book_my_show.Services;
 
 import com.book_my_show.Convertors.TicketConvertor;
 import com.book_my_show.DTOs.EntryDTOs.TicketEntryDTO;
-import com.book_my_show.Entities.ShowEntity;
-import com.book_my_show.Entities.ShowSeatEntity;
-import com.book_my_show.Entities.TicketEntity;
-import com.book_my_show.Entities.UserEntity;
+import com.book_my_show.Entities.*;
 import com.book_my_show.Repository.ShowRepository;
 import com.book_my_show.Repository.TicketRepository;
 import com.book_my_show.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import javax.mail.internet.MimeMessage;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -27,9 +26,11 @@ public class TicketService {
     @Autowired
     UserRepository userRepository;
 
+    @Autowired
+    JavaMailSender javaMailSender;
+
     //Convenience fee
     private final int baseAmount = 100;
-    private final int gstPercentage = 18;
 
     public String bookTickets(TicketEntryDTO ticketEntryDTO) throws Exception{
 
@@ -45,7 +46,7 @@ public class TicketService {
         int totalSeatsPrice = checkSeatAvailabilityAndGetPrice(ticketEntryDTO);
         if(totalSeatsPrice == -1) throw new Exception("Show seats are already booked!");
 
-        int ticketPrice = totalSeatsPrice + baseAmount + ((totalSeatsPrice*gstPercentage) / 100);
+        int ticketPrice = totalSeatsPrice + baseAmount;
         ticket.setTicketPrice(ticketPrice);
         ticket.setBookedSeats(ticketEntryDTO.getRequestedSeats().toString());
         ticket.setShowEntity(showEntity);
@@ -59,6 +60,8 @@ public class TicketService {
 
         showRepository.save(showEntity);
         userRepository.save(userEntity);
+
+        sendMailToUser(ticket);
 
         return "Ticket Booked Successfully | " + ticket.getMovieName() + " | Date: " + ticket.getMovieDate()
                 + " | Time: "
@@ -93,5 +96,93 @@ public class TicketService {
 
         showEntity.setShowSeats(showSeats);
         return seatsPrice;
+    }
+
+
+    private void sendMailToUser(TicketEntity ticket) throws Exception {
+        String body = getHTMLBody(ticket);
+
+
+        MimeMessage mimeMessage=javaMailSender.createMimeMessage();
+        MimeMessageHelper mimeMessageHelper=new MimeMessageHelper(mimeMessage,true);
+        mimeMessage.setContent(body, "text/html");
+        mimeMessageHelper.setFrom("confirm@showmaker.com");
+        mimeMessageHelper.setTo(ticket.getUserEntity().getEmail());
+        mimeMessageHelper.setSubject("Booking Confirmed: " + ticket.getMovieName());
+
+        javaMailSender.send(mimeMessage);
+    }
+
+    private String getHTMLBody(TicketEntity ticket) {
+        MovieEntity movie = ticket.getShowEntity().getMovieEntity();
+        String htmlBody = "<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n" +
+                "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+                "    <title>Document</title>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "    <div style=\"width: 600px; padding: 10px; text-align: center; margin: auto; background-color: #EEE;\">\n" +
+                "        <h2 style=\"border-bottom: 2px solid gray;\">Booking Confirmed</h2>\n" +
+                "        <p style=\"text-align: left;  font-family: Arial, Helvetica, sans-serif; line-height: 1.5rem;\">Dear customer,<br>Your movie booking is confirmed, Download the M-ticket on your mobile to show at cinema entrance.</p>\n" +
+               "<br>\n" +
+                "        <div style=\"background-color: gray;  border-radius: 12px; padding: 10px; display: flex;\">\n" +
+                "            <div style=\"width: 40%;\">\n" +
+                "               <img style=\"width: 70%; border-radius: 12px;\" src=" +
+                movie.getPosterUrl() +
+                " alt=\"movie-poster\">\n" +
+                "            </div>\n" +
+                "            <div style=\"width: 60%; text-align: left; color: #fff;\">\n" +
+                "                <h3 style=\"font-family: Lucida Console;\">" +
+                ticket.getMovieName() +
+                "</h3>\n" +
+                "                <h4 style=\"font-family: Lucida Console;\">" +
+                movie.getLanguage() + ", " + ticket.getShowEntity().getShowType() +
+                "</h4>\n" +
+                "                <h4 style=\"font-family: Lucida Console;\">" +
+                ticket.getMovieDate() + ", " + ticket.getMovieTime() +
+                "</h4>\n" +
+                "                <h4 style=\"font-family: Lucida Console;\">" +
+                ticket.getTheatreName() + ", " + ticket.getShowEntity().getTheatreEntity().getLocation() +
+                "</h4>\n" +
+                "                <button style=\"padding: 10px; background-color: coral; color: #20262E; border: none; border-radius: 6px;\">Download M-Ticket</button>\n" +
+                "            </div>\n" +
+                "            \n" +
+                "        </div>\n" +
+                "        <div style=\"background-color: gray; border-radius: 12px; padding: 10px; border-top: 1px solid #20262E; color: #fff;\">\n" +
+                "            <img src=\"https://i.ibb.co/84pxZJp/qr.png\" alt=\"qr\" height=\"150px\"width=\"150px\">\n" +
+                "            <h4 style=\"font-family: Lucida Console;\">Booking ID:" +
+                ticket.getTicketId() +
+                "</h4>\n" +
+                "            <h2>" +
+                ticket.getBookedSeats().split(",").length + " " + "Tickets</h2>\n" +
+                "            <h4 style=\"font-family: Lucida Console;\">Seats:" + " " +
+                ticket.getBookedSeats() +
+                "</h4>\n" +
+                "        </div>\n" +
+                "        <br>\n" +
+                "        <div style=\"text-align: left; padding: 10px;\">\n" +
+                "            <h3>Booking Summary</h3>\n" +
+                "            <h6>Ticket: " +
+                (ticket.getTicketPrice() - baseAmount) +
+                "</h6>\n" +
+                "            <h6>Convinience fee: " +
+                baseAmount +
+                "</h6>\n" +
+                "            <h6>Total Price: " +
+                ticket.getTicketPrice() +
+                "</h6>\n" +
+                "        </div>\n" +
+                "\n" +
+                "        <footer style=\"padding: 10px; background-color: black; color: #fff;\">\n" +
+                "            Thanks for booking with us! Your Show Maker.\n" +
+                "        </footer>\n" +
+                "    </div>\n" +
+                "</body>\n" +
+                "</html>";
+
+        return htmlBody;
     }
 }

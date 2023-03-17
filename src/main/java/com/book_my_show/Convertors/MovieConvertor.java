@@ -11,7 +11,8 @@ public class MovieConvertor {
                 .genre(movieEntryDTO.getGenre())
                 .rating(movieEntryDTO.getRating())
                 .duration(movieEntryDTO.getDuration())
-                .language(movieEntryDTO.getLanguage()).build();
+                .language(movieEntryDTO.getLanguage())
+                .posterUrl(movieEntryDTO.getPosterUrl()).build();
 
         return movieEntity;
     }
