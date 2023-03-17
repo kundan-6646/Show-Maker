@@ -3,6 +3,7 @@ package com.book_my_show.Services;
 import com.book_my_show.Convertors.TicketConvertor;
 import com.book_my_show.DTOs.EntryDTOs.TicketEntryDTO;
 import com.book_my_show.Entities.*;
+import com.book_my_show.Enums.TicketStatus;
 import com.book_my_show.Repository.ShowRepository;
 import com.book_my_show.Repository.TicketRepository;
 import com.book_my_show.Repository.UserRepository;
@@ -12,6 +13,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import javax.mail.internet.MimeMessage;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -61,12 +63,54 @@ public class TicketService {
         showRepository.save(showEntity);
         userRepository.save(userEntity);
 
-        sendMailToUser(ticket);
+        sendMailToUser(ticket, true);
 
         return "Ticket Booked Successfully | " + ticket.getMovieName() + " | Date: " + ticket.getMovieDate()
                 + " | Time: "
                 + ticket.getMovieTime() + " | Seats are: " + ticket.getBookedSeats() + " | Price: " +
                 ticket.getTicketPrice();
+    }
+
+    public String getTicket(int ticketId) throws Exception {
+        TicketEntity ticket = ticketRepository.findById(ticketId).get();
+        if(ticket == null) throw new Exception("Ticket Id Invalid");
+
+        sendMailToUser(ticket, true);
+        return "Movie: " + ticket.getMovieName() + " | Price: " + ticket.getTicketPrice() +
+                " | Ticket ID: " + ticket.getTicketId();
+
+    }
+
+    public String cancel(int ticketId) throws Exception {
+        TicketEntity ticket = ticketRepository.findById(ticketId).get();
+        if(ticket == null) throw new Exception("Ticket Id Invalid");
+        if(ticket.getTicketStatus().equals(TicketStatus.CANCELLED)) throw new Exception("Ticket is already cancelled");
+
+        ShowEntity showEntity = ticket.getShowEntity();
+
+        //making show seats again available
+        List<ShowSeatEntity> showSeats = showEntity.getShowSeats();
+        String ticketBookedSeats = ticket.getBookedSeats().substring(1, ticket.getBookedSeats().length()-1);
+        String[] bookedSeats = ticketBookedSeats.split(",");
+        for (ShowSeatEntity showSeat: showSeats) {
+            String currSeatNumber = showSeat.getSeatNo();
+            for (String bookedSeatNumber: bookedSeats) {
+                String seatNumber = bookedSeatNumber.trim();
+
+                if(seatNumber.equals(currSeatNumber)) {
+                    showSeat.setBookedAt(null);
+                    showSeat.setBooked(false);
+                }
+            }
+        }
+
+        ticket.setTicketStatus(TicketStatus.CANCELLED);
+        ticketRepository.save(ticket);
+        showRepository.save(showEntity);
+
+        sendMailToUser(ticket, false);
+
+        return "Booking Cancelled Successfully";
     }
 
     private int checkSeatAvailabilityAndGetPrice(TicketEntryDTO ticketEntryDTO) {
@@ -99,21 +143,22 @@ public class TicketService {
     }
 
 
-    private void sendMailToUser(TicketEntity ticket) throws Exception {
-        String body = getHTMLBody(ticket);
-
+    private void sendMailToUser(TicketEntity ticket, boolean booking) throws Exception {
+        String body = booking ? getHTMLBodyOfBooking(ticket): getHTMLBodyOfCancellation(ticket);
+        String subject = booking ? "Booking Confirmed: " + ticket.getMovieName(): "Booking Cancelled: " + ticket.getMovieName();
 
         MimeMessage mimeMessage=javaMailSender.createMimeMessage();
         MimeMessageHelper mimeMessageHelper=new MimeMessageHelper(mimeMessage,true);
         mimeMessage.setContent(body, "text/html");
         mimeMessageHelper.setFrom("confirm@showmaker.com");
         mimeMessageHelper.setTo(ticket.getUserEntity().getEmail());
-        mimeMessageHelper.setSubject("Booking Confirmed: " + ticket.getMovieName());
+        mimeMessageHelper.setSubject(subject);
 
         javaMailSender.send(mimeMessage);
     }
 
-    private String getHTMLBody(TicketEntity ticket) {
+
+    private String getHTMLBodyOfBooking(TicketEntity ticket) {
         MovieEntity movie = ticket.getShowEntity().getMovieEntity();
         String htmlBody = "<!DOCTYPE html>\n" +
                 "<html lang=\"en\">\n" +
@@ -185,4 +230,61 @@ public class TicketService {
 
         return htmlBody;
     }
+
+    private String getHTMLBodyOfCancellation(TicketEntity ticket) {
+        MovieEntity movie = ticket.getShowEntity().getMovieEntity();
+        String htmlBody = "<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n" +
+                "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+                "    <title>Document</title>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "    <div style=\"width: 600px; padding: 10px; text-align: center; margin: auto; background-color: #EEE;\">\n" +
+                "        <h2 style=\"border-bottom: 2px solid gray; padding: 5px;\">Booking Cancelled</h2>\n" +
+                "        <p style=\"text-align: left;  font-family: Arial, Helvetica, sans-serif; line-height: 1.5rem;\">Dear customer,<br>We have received your request for the folowing show cancellation, It will be processed soon.</p>\n" +
+                "        <br>\n" +
+                "        <div style=\"background-color: gray;  border-radius: 12px; padding: 10px; display: flex;\">\n" +
+                "            <div style=\"width: 40%;\">\n" +
+                "               <img style=\"width: 70%; border-radius: 12px;\" src=" +
+                movie.getPosterUrl() +
+                " alt=\"movie-poster\">\n" +
+                "            </div>\n" +
+                "            <div style=\"width: 60%; text-align: left; color: #fff; font-family: Lucida Console;\">\n" +
+                "                <h3>" +
+                ticket.getMovieName() +
+                "</h3>\n" +
+                "                <h4>" +
+                movie.getLanguage() + ", " + ticket.getShowEntity().getShowType() +
+                "</h4>\n" +
+                "                <h4>" +
+                ticket.getMovieDate() + ", " + ticket.getMovieTime() +
+                "</h4>\n" +
+                "                <h4 style=\"font-family: Lucida Console;\">" +
+                ticket.getTheatreName() + ", " + ticket.getShowEntity().getTheatreEntity().getLocation() +
+                "</h4>\n" +
+                "                <h4>" +
+                ticket.getBookedSeats() +
+                "</h4>\n" +
+                "                <button style=\"padding: 10px; background-color: coral; color: #20262E; border: none; border-radius: 6px;\">Track Status</button>\n" +
+                "            </div>\n" +
+                "            \n" +
+                "        </div>\n" +
+                "        <br>\n" +
+                "\n" +
+                "\n" +
+                "        <footer style=\"padding: 10px; background-color: black; color: #fff;\">\n" +
+                "            Thanks for booking with us! Your Show Maker.\n" +
+                "        </footer>\n" +
+                "    </div>\n" +
+                "</body>\n" +
+                "</html>";
+
+
+
+        return htmlBody;
+    }
+
 }

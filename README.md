@@ -72,7 +72,7 @@ Admins can :-
 
 # Cancel Ticket's Confirmation Email
 
-![image]()
+<img src="./screenshots/cancel-mail.jpg" width="500" />
 
 
 
@@ -125,4 +125,4 @@ Admins can :-
 
 
 
-![image]()
+![image](/screenshots/ticket-cancel.png)

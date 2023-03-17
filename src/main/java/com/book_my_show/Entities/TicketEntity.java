@@ -1,6 +1,8 @@
 package com.book_my_show.Entities;
 
 import javax.persistence.*;
+
+import com.book_my_show.Enums.TicketStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,6 +30,9 @@ public class TicketEntity {
     private String ticketId ;
     private String audiName;
     private String bookedSeats;
+
+    @Enumerated(value = EnumType.STRING)
+    private TicketStatus ticketStatus;
 
     @ManyToOne
     @JoinColumn
